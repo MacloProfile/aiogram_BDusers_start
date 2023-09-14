@@ -1,0 +1,65 @@
+# IntelliJ IDEA
+.idea/
+
+# Visual Studio Code
+.vscode/
+
+# Cache and temporary files
+*.log
+*.log.*
+*.tmp
+*.temp
+*.cache
+*.out
+
+# Project settings files
+*.iml
+*.ipr
+*.iws
+.idea/
+
+# Visual Studio Code settings files
+.vscode/
+
+# macOS system and temporary files
+.DS_Store
+
+# Windows system and temporary files
+Thumbs.db
+Desktop.ini
+$RECYCLE.BIN/
+
+# npm cache
+node_modules/
+
+# Yarn cache
+yarn-error.log
+yarn.lock
+
+# pip cache
+__pycache__/
+*.pyc
+
+# pipenv cache
+.Python
+Pipfile.lock
+
+# Maven cache
+target/
+*.iml
+
+# Gradle cache
+build/
+
+# Eclipse cache
+bin/
+tmp/
+.settings/
+.classpath
+.project
+
+# Python virtual environment
+venv/
+
+# Java build files
+*.class
