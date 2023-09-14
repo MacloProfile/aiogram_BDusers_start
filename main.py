@@ -3,6 +3,7 @@ import configparser  # For reading configuration settings
 import random  # For generating random values
 import string  # For working with strings
 import time  # For time-related operations
+import logging
 
 from aiogram import Bot, types  # For working with the Telegram Bot API
 from aiogram.contrib.fsm_storage.memory import MemoryStorage  # For managing states in the bot
@@ -12,7 +13,7 @@ from aiogram.types import (
     ReplyKeyboardMarkup,
     KeyboardButton,
     InlineKeyboardMarkup,
-    InlineKeyboardButton,
+    InlineKeyboardButton, ParseMode,
 )  # For defining message types and keyboards
 from aiogram.utils import executor  # For handling bot execution
 
@@ -78,6 +79,7 @@ def get_user_info(user_id):
 👤 *Приглашено:* {db.get_refs(user_id)}
 """
 
+
 # Define a function to create a reply keyboard
 def reply_keyboard():
     keyboard = ReplyKeyboardMarkup(resize_keyboard=True)
@@ -85,11 +87,13 @@ def reply_keyboard():
     keyboard.add(KeyboardButton('💵 Пополнить баланс'))
     return keyboard
 
+
 # Define a function to create a simple "back" keyboard
 def just_back():
     keyboard = ReplyKeyboardMarkup(resize_keyboard=True)
     keyboard.add(KeyboardButton('↪️ Назад'))
     return keyboard
+
 
 # Define a function to create an inline payment keyboard
 def inline_keyboard(pay_sum, comment, code):
@@ -98,17 +102,61 @@ def inline_keyboard(pay_sum, comment, code):
     keyboard.add(InlineKeyboardButton(text="💵 Оплатить", url=link))
     return keyboard
 
+
 # Define a function to generate a random order ID
 def random_order():
     return f"{random.randint(44, 77)}{random.choice(string.ascii_letters)}{random.choice(string.ascii_letters)}{random.randint(371, 984)}{random.choice(string.ascii_letters)}{random.randint(11, 24)}"
 
 
+# Read channel list from a file
+def get_channels():
+    with open('channels.txt', 'r') as file:
+        channels = [line.strip() for line in file.readlines() if line.strip()]
+    return channels
+
+
+# Delete the "@" character at the beginning of the channel name
+def convert_channel_name_to_link(channel_name):
+    if channel_name.startswith('@'):
+        channel_name = channel_name[1:]
+    return f"https://t.me/{channel_name}"
+
+
 # Define a handler for the main menu and start command
 @dp.message_handler(text=["💼 Профиль", "↪️ Назад"], state="*")
 @dp.message_handler(commands=["start"], state="*")
-async def menu(message: types.Message, state: FSMContext):
+async def menu(message: types.Message):
     _user_id = message.chat.id
     _username = message.chat.username
+
+    # Get the channel list from the file
+    channels = get_channels()
+
+    # Check the user's subscription to all channels
+    subscribed_to_all = True
+
+    unsubscribed_channels = []
+
+    for channel in channels:
+        try:
+            is_subscribed = await bot.get_chat_member(chat_id=channel, user_id=_user_id)
+            if not (is_subscribed.status == 'member' or is_subscribed.status == 'administrator' or is_subscribed.status == 'creator'):
+                subscribed_to_all = False
+                unsubscribed_channels.append(convert_channel_name_to_link(channel))
+                break
+        except Exception as e:
+            # Error handling if channel not found or other problems
+            logging.error(f"Ошибка проверки канала {channel}: {str(e)}")
+
+    if subscribed_to_all:
+        await message.answer("Вы подписаны на все каналы из списка. Можете использовать бота.")
+    else:
+        unsubscribed_channel_list = "\n".join(unsubscribed_channels)
+        reply_message = f"👋Для использования бота, пожалуйста, подпишитесь на следующие каналы:\n{unsubscribed_channel_list}"
+        await message.answer(reply_message)
+        return
+
+
     if not (db.get_users_exist(message.chat.id)):
         if (message.text != "💼 Профиль" and message.text.startswith("/start ")):
             _ref = message.text.replace("/start ", "")
@@ -130,6 +178,7 @@ async def menu(message: types.Message, state: FSMContext):
     await message.answer(profile(_user_id), reply_markup=reply_keyboard(), parse_mode="HTML")
     await States.menu.set()
 
+
 # Define a handler for adding balance option in the main menu
 @dp.message_handler(text=["💵 Пополнить баланс"], state=States.menu)
 async def menu(message: types.Message, state: FSMContext):
@@ -137,6 +186,7 @@ async def menu(message: types.Message, state: FSMContext):
     _username = message.chat.username
     await message.answer(f"💵 *Введите сумму пополнения*", reply_markup=just_back(), parse_mode="Markdown")
     await States.pay.set()
+
 
 # Define a handler for the payment state
 @dp.message_handler(state=States.pay)
@@ -159,6 +209,7 @@ async def menu(message: types.Message, state: FSMContext):
             await message.answer(f"*Введите сумму от 10₽ до 500₽*", reply_markup=just_back(), parse_mode="Markdown")
     else:
         await message.answer(f"*Введите сумму числом*", reply_markup=just_back(), parse_mode="Markdown")
+
 
 # Define a handler for admin commands
 @dp.message_handler(commands="admin", state="*")
@@ -350,10 +401,11 @@ async def admin_info(message: types.Message, state: FSMContext):
         else:
             await message.answer(get_user_info(_ID), reply_markup=reply_keyboard(), parse_mode="Markdown")
 
+
 # Define a message handler for admin top command
 @dp.message_handler(commands="top", state="*")
 async def admin_top(message: types.Message, state: FSMContext):
-    if (message.chat.id == admin_id):
+    if message.chat.id == admin_id:
         _text = "<b>💵 Топ по балансу</b>"
         for i in db.get_top_balance(5):
             _text = _text + f"\n{i[5]} | {i[1]} (@{i[2]})"
