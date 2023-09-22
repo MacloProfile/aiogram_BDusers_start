@@ -1,21 +1,21 @@
 # Import necessary libraries/modules
-import configparser  # For reading configuration settings
-import random  # For generating random values
-import string  # For working with strings
-import time  # For time-related operations
+import configparser
+import random
+import string
+import time
 import logging
 
-from aiogram import Bot, types  # For working with the Telegram Bot API
-from aiogram.contrib.fsm_storage.memory import MemoryStorage  # For managing states in the bot
-from aiogram.dispatcher import Dispatcher, FSMContext  # For handling message dispatching and states
-from aiogram.dispatcher.filters.state import State, StatesGroup  # For defining states
+from aiogram import Bot, types
+from aiogram.contrib.fsm_storage.memory import MemoryStorage
+from aiogram.dispatcher import Dispatcher, FSMContext
+from aiogram.dispatcher.filters.state import State, StatesGroup
 from aiogram.types import (
     ReplyKeyboardMarkup,
     KeyboardButton,
     InlineKeyboardMarkup,
     InlineKeyboardButton, ParseMode,
-)  # For defining message types and keyboards
-from aiogram.utils import executor  # For handling bot execution
+)
+from aiogram.utils import executor
 
 import db  # A custom module for database operations
 
@@ -140,7 +140,8 @@ async def menu(message: types.Message):
     for channel in channels:
         try:
             is_subscribed = await bot.get_chat_member(chat_id=channel, user_id=_user_id)
-            if not (is_subscribed.status == 'member' or is_subscribed.status == 'administrator' or is_subscribed.status == 'creator'):
+            if not (
+                    is_subscribed.status == 'member' or is_subscribed.status == 'administrator' or is_subscribed.status == 'creator'):
                 subscribed_to_all = False
                 unsubscribed_channels.append(convert_channel_name_to_link(channel))
                 break
@@ -156,11 +157,10 @@ async def menu(message: types.Message):
         await message.answer(reply_message)
         return
 
-
     if not (db.get_users_exist(message.chat.id)):
-        if (message.text != "💼 Профиль" and message.text.startswith("/start ")):
+        if message.text != "💼 Профиль" and message.text.startswith("/start "):
             _ref = message.text.replace("/start ", "")
-            if (int(message.chat.id) != int(_ref)):
+            if int(message.chat.id) != int(_ref):
                 db.add_user_to_db(message.chat.id, message.chat.username, _ref, db.get_settings()[4])
                 db.set_balance(_ref, db.get_balance(_ref) + db.get_settings()[5])
                 await bot.send_message(chat_id=admin_id,
@@ -259,7 +259,7 @@ async def admin_menu(message: types.Message, state: FSMContext):
 # Define a handler for displaying admin commands
 @dp.message_handler(commands="help_admin", state="*")
 async def admin_help(message: types.Message, state: FSMContext):
-    if (message.chat.id == admin_id):
+    if message.chat.id == admin_id:
         await message.answer(f'''💼 *Команды админа*
 
 */help_admin* - Список команд админа
